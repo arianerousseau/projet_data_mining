@@ -3,8 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, MaxAbsScaler
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -63,8 +63,13 @@ def handle_missing_values(df, method, axis=None):
             imputer = SimpleImputer(strategy='median')
         elif method == 'Replace with mode':
             imputer = SimpleImputer(strategy='most_frequent')
+        elif method == 'KNN Imputation':
+            imputer = KNNImputer()
         else:
             return df
+        
+        if method == 'Replace with None':
+            return df.fillna('None')
         
         df_numeric = pd.DataFrame(imputer.fit_transform(df[numeric_cols]), columns=numeric_cols)
         df_non_numeric = df[non_numeric_cols]
@@ -84,6 +89,10 @@ def normalize_data(df, method):
         scaler = MinMaxScaler()
     elif method == 'Z-score':
         scaler = StandardScaler()
+    elif method == 'Robust Scaler':
+        scaler = RobustScaler()
+    elif method == 'Max Abs Scaler':
+        scaler = MaxAbsScaler()
     else:
         return df
     
@@ -315,8 +324,8 @@ elif selection == "Part II: Data Pre-processing and Cleaning":
         
         # Handle missing values
         st.write("**Handling Missing Values**")
-        method = st.selectbox("Choose a method to handle missing values:", 
-                              ['Delete rows', 'Delete columns', 'Replace with mean', 'Replace with median', 'Replace with mode'])
+        method = st.selectbox("Choose a method to handle missing values:",
+                              ['Replace with None','Delete rows', 'Delete columns', 'Replace with mean', 'Replace with median', 'Replace with mode', 'Replace with KNN Imputation'])
         if method in ['Delete rows', 'Delete columns']:
             axis = 0 if method == 'Delete rows' else 1
             st.session_state.df = handle_missing_values(df, method, axis)
@@ -327,8 +336,8 @@ elif selection == "Part II: Data Pre-processing and Cleaning":
 #---------------------------------------------------------------
         # Normalize data
         st.write("**Normalizing Data**")
-        normalize_method = st.selectbox("Choose a method to normalize the data:", 
-                                        ['None', 'Min-Max', 'Z-score'])
+        normalize_method = st.selectbox("Choose a method to normalize the data:",
+                                        ['None', 'Min-Max', 'Z-score', "Robust Scaler", "Max Abs Scaler"])
         if normalize_method != 'None':
             st.session_state.df = normalize_data(st.session_state.df, normalize_method)
         
@@ -337,9 +346,6 @@ elif selection == "Part II: Data Pre-processing and Cleaning":
         
     else:
         st.warning("No data loaded. Please load a CSV file in the '1.1. Data Loading' section.")
-
-
-
 
 #-------------------------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------------------------
