@@ -357,24 +357,62 @@ elif selection == "Part III: Visualization of the cleaned data":
         df = st.session_state.df
         
         st.write("**Data Visualization**")
-        plot_type = st.selectbox("Choose a type of plot:", ["Histogram", "Box Plot"])
-        column = st.selectbox("Choose a column to visualize:", df.columns)
+        plot_type = st.selectbox("Choose a type of plot:", ["Histogram", "Box Plot", "Scatter Plot", "Correlation Heatmap", "Bar Chart", "Pie Chart"])
         
         if plot_type == "Histogram":
-            st.write(f"Histogram for {column}")
+            st.subheader("Histogram")
+            column = st.selectbox("Select column for histogram", df.select_dtypes(include=['number']).columns)
             plt.figure(figsize=(10, 6))
             sns.histplot(df[column], kde=True)
             st.pyplot(plt)
-        
+
         elif plot_type == "Box Plot":
-            st.write(f"Box Plot for {column}")
+            st.subheader("Box Plot")
+            column = st.selectbox("Select column for box plot", df.select_dtypes(include=['number']).columns)
             plt.figure(figsize=(10, 6))
             sns.boxplot(y=df[column])
             st.pyplot(plt)
-        
-    else:
-        st.warning("No data loaded. Please load a CSV file in the '1.1. Data Loading' section.")
 
+        elif plot_type == "Scatter Plot":
+            st.subheader("Scatter Plot")
+            columns = st.multiselect("Select columns for scatter plot", df.select_dtypes(include=['number']).columns)
+            if len(columns) == 2:
+                plt.figure(figsize=(10, 6))
+                sns.scatterplot(x=df[columns[0]], y=df[columns[1]])
+                st.pyplot(plt)
+            else:
+                st.warning("Please select exactly 2 columns for scatter plot.")
+        elif plot_type == "Correlation Heatmap":
+            st.subheader("Correlation Heatmap")
+            plt.figure(figsize=(10, 6))
+            sns.heatmap(df.corr(), annot=True, cmap='coolwarm')
+            st.pyplot(plt)
+        elif plot_type == "Bar Chart":
+            st.subheader("Bar Chart")
+            object_columns = df.select_dtypes(include=['object']).columns
+            if not object_columns.empty:
+                column = st.selectbox("Select column for bar chart", object_columns)
+                plt.figure(figsize=(10, 6))
+                df[column].value_counts().plot(kind='bar')
+                plt.xlabel(column)
+                plt.ylabel("Count")
+                st.pyplot(plt)
+            else:
+                st.warning("No non-numerical columns available for bar chart.")
+                
+        elif plot_type == "Pie Chart":
+            st.subheader("Pie Chart")
+            object_columns = df.select_dtypes(include=['object']).columns
+            if not object_columns.empty:
+                column = st.selectbox("Select column for pie chart", object_columns)
+                plt.figure(figsize=(10, 6))
+                df[column].value_counts().plot(kind='pie', autopct='%1.1f%%')
+                plt.ylabel(column)
+                st.pyplot(plt)
+            else:
+                st.warning("No non-numerical columns available for pie chart.")
+        else:
+            st.warning("No data loaded. Please load a CSV file in the '1.1. Data Loading' section.")
 #-------------------------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------------------------
 
