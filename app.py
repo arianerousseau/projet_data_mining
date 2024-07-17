@@ -15,6 +15,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 from sklearn.compose import ColumnTransformer
+from sklearn.decomposition import PCA
 
 
 #-------------------------------------------------------------------------------------------------------------------------------
@@ -253,7 +254,7 @@ def prediction_statistics(algorithm, result):
 #-------------------------------------------------------------------------------------------------------------------------------
 
 st.title("Data Mining Project")
-st.subheader("Capucine Foucher - BIA1")
+st.subheader("Capucine Foucher and Ariane Rousseau - BIA1")
 
 # Create a sidebar for navigation
 st.sidebar.title("MENU - Data Mining Project")
@@ -387,6 +388,7 @@ elif selection == "Part III: Visualization of the cleaned data":
             plt.figure(figsize=(10, 6))
             sns.heatmap(df.corr(), annot=True, cmap='coolwarm')
             st.pyplot(plt)
+
         elif plot_type == "Bar Chart":
             st.subheader("Bar Chart")
             object_columns = df.select_dtypes(include=['object']).columns
@@ -399,7 +401,6 @@ elif selection == "Part III: Visualization of the cleaned data":
                 st.pyplot(plt)
             else:
                 st.warning("No non-numerical columns available for bar chart.")
-                
         elif plot_type == "Pie Chart":
             st.subheader("Pie Chart")
             object_columns = df.select_dtypes(include=['object']).columns
@@ -411,8 +412,10 @@ elif selection == "Part III: Visualization of the cleaned data":
                 st.pyplot(plt)
             else:
                 st.warning("No non-numerical columns available for pie chart.")
-        else:
-            st.warning("No data loaded. Please load a CSV file in the '1.1. Data Loading' section.")
+
+    else:
+        st.warning("No data loaded. Please load a CSV file in the '1.1. Data Loading' section.")
+
 #-------------------------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------------------------
 
@@ -421,23 +424,50 @@ elif selection == "Part IV: Clustering or prediction":
     if 'df' in st.session_state and st.session_state.df is not None:
         df = st.session_state.df
         
+        # Standardization
+        scaler = StandardScaler()
+        scaled_data = scaler.fit_transform(df.select_dtypes(include=['number']))
+
+        # PCA for dimensionality reduction (optional)
+        pca = PCA(n_components=2)
+        principal_components = pca.fit_transform(scaled_data)
+        pca_data = pd.DataFrame(data=principal_components, columns=['PCA1', 'PCA2'])
+
         task = st.selectbox("Choose a task:", ["Clustering", "Prediction"])
         
         if task == "Clustering":
             st.session_state.algorithm = st.selectbox("Choose a clustering algorithm:", ["K-Means", "DBSCAN"])
             
             if st.session_state.algorithm == "K-Means":
-                n_clusters = st.number_input("Number of clusters (k):", min_value=2, max_value=10, value=3)
-                params = {'n_clusters': n_clusters}
+                k = st.slider("Select the number of clusters (k)", min_value=2, max_value=10, value=2)
+                kmeans = KMeans(n_clusters=k, random_state=0)
+                cluster_labels = kmeans.fit_predict(scaled_data)
+                pca_data['Cluster'] = cluster_labels
+
+                # Visualize clusters
+                st.subheader("Visualization of Clusters (PCA)")
+                plt.figure(figsize=(10, 6))
+                sns.scatterplot(x='PCA1', y='PCA2', hue='Cluster', data=pca_data, palette='Set1', legend='full')
+                st.pyplot(plt)
+
+                st.subheader("Cluster Centers")
+                st.write(pd.DataFrame(kmeans.cluster_centers_, columns=df.select_dtypes(include=['number']).columns))
+
             elif st.session_state.algorithm == "DBSCAN":
-                eps = st.number_input("Epsilon (eps):", min_value=0.1, max_value=10.0, value=0.5)
-                min_samples = st.number_input("Minimum samples:", min_value=1, max_value=10, value=5)
-                params = {'eps': eps, 'min_samples': min_samples}
-            
-            if st.button("Run Clustering"):
-                df = perform_clustering(df, st.session_state.algorithm, params)
-                st.write("Clustering results:")
-                st.dataframe(df)
+                eps = st.slider("Select the maximum distance between two samples (eps)", min_value=0.1, max_value=2.0, step=0.1, value=0.5)
+                min_samples = st.slider("Select the minimum number of samples in a neighborhood (min_samples)", min_value=2, max_value=10, value=5)
+                dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+                cluster_labels = dbscan.fit_predict(scaled_data)
+                pca_data['Cluster'] = cluster_labels
+
+                # Visualize clusters
+                st.subheader("Visualization of Clusters (PCA)")
+                plt.figure(figsize=(10, 6))
+                sns.scatterplot(x='PCA1', y='PCA2', hue='Cluster', data=pca_data, palette='Set1', legend='full')
+                st.pyplot(plt)
+
+                st.subheader("Number of clusters found by DBSCAN")
+                st.write(len(set(dbscan.labels_)) - (1 if -1 in dbscan.labels_ else 0))
         
         elif task == "Prediction":
             st.session_state.prediction_algorithm = st.selectbox("Choose a prediction algorithm:", ["Linear Regression", "Logistic Regression"])
