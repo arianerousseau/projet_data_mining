@@ -1,4 +1,4 @@
-# projet_data_mining
+# Projet Data Mining
 
 This project was realised by Ariane Rousseau and Capucine Foucher.
 
